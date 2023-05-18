@@ -215,9 +215,13 @@ class F110Env(gym.Env):
         self.render_mode = render_mode
         render_spec = RenderSpec(render_mode=render_mode, render_fps=self.metadata['render_fps'])
         self.renderer = make_renderer(render_spec)
-        self.renderer.load_map(map_filepath=map_filepath)
-        self.renderer.render_map()
         self.render_obs = None
+        self.last_frame = None
+
+        if self.renderer:
+            self.renderer.load_map(map_filepath=map_filepath)
+            self.renderer.render_map()
+
 
     def __del__(self):
         """
