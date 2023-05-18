@@ -9,4 +9,6 @@ def make_renderer(render_spec: RenderSpec = None) -> EnvRenderer:
     elif render_spec.render_mode in ["human", "rgb_array"]:
         from f110_gym.envs.rendering.rendering_pygame import PygameEnvRenderer
         renderer = PygameEnvRenderer(render_spec=render_spec)
+    else:
+        renderer = None
     return renderer
