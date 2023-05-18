@@ -437,9 +437,10 @@ class F110Env(gym.Env):
         Returns:
             None
         """
-        # NOTE: separate render (manage render-mode) from render_frame (actual rendering with pyglet)
         # render according to fps
-        if not int(self.current_time / self.timestep) % int(100 / self.metadata['render_fps']) == 0:
+        render_every = int(100 / self.metadata['render_fps'])
+        if not (int(self.current_time / self.timestep) == 1 or
+                int(self.current_time / self.timestep) % render_every == 0):
             if self.render_mode == 'rgb_array':
                 return self.last_frame
             else:
