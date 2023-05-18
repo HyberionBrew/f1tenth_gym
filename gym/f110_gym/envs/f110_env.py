@@ -23,6 +23,7 @@
 '''
 Author: Hongrui Zheng
 '''
+import pathlib
 
 # gym imports
 import gymnasium as gym
@@ -38,14 +39,11 @@ import time
 # gl
 import pyglet
 
-pyglet.options['debug_gl'] = False
-from pyglet import gl
+from f110_gym.envs.rendering import make_renderer, RenderSpec
 
 # constants
 
 # rendering
-VIDEO_W = 600
-VIDEO_H = 400
 WINDOW_W = 1000
 WINDOW_H = 800
 
@@ -91,16 +89,9 @@ class F110Env(gym.Env):
             ego_idx (int, default=0): ego's index in list of agents
     """
     # NOTE: change matadata with default rendering-modes, add definition of render_fps
-    metadata = {'render_modes': ['human', 'human_fast', 'rgb_array'], 'render_fps': 100}
-
-    # rendering
-    renderer = None
-    current_obs = None
-    render_callbacks = []
+    metadata = {'render_modes': ['human', 'human_fast', 'rgb_array'], 'render_fps': 30}
 
     def __init__(self, render_mode=None, **kwargs):
-        # NOTE: change signature, add render_mode
-
         # kwargs extraction
         try:
             self.seed = kwargs['seed']
@@ -220,8 +211,13 @@ class F110Env(gym.Env):
                                            dtype=np.float32)
 
         # stateful observations for rendering
-        self.render_obs = None
+        map_filepath = pathlib.Path(f"{self.map_name}{self.map_ext}")
         self.render_mode = render_mode
+        render_spec = RenderSpec(render_mode=render_mode, render_fps=self.metadata['render_fps'])
+        self.renderer = make_renderer(render_spec)
+        self.renderer.load_map(map_filepath=map_filepath)
+        self.renderer.render_map()
+        self.render_obs = None
 
     def __del__(self):
         """
@@ -312,16 +308,7 @@ class F110Env(gym.Env):
             if isinstance(obs[key], np.ndarray) or isinstance(obs[key], list):
                 obs[key] = np.array(obs[key], dtype=np.float32)
 
-        F110Env.current_obs = obs
-
-        self.render_obs = {
-            'ego_idx': obs['ego_idx'],
-            'poses_x': obs['poses_x'],
-            'poses_y': obs['poses_y'],
-            'poses_theta': obs['poses_theta'],
-            'lap_times': obs['lap_times'],
-            'lap_counts': obs['lap_counts']
-        }
+        self.render_obs = self.get_render_obs(obs)
 
         # times
         reward = self.timestep
@@ -384,16 +371,20 @@ class F110Env(gym.Env):
         action = np.zeros((self.num_agents, 2))
         obs, _, _, _, info = self.step(action)
 
-        self.render_obs = {
+        self.render_obs = self.get_render_obs(obs)
+
+        return obs, info
+
+    def get_render_obs(self, obs):
+        return {
             'ego_idx': obs['ego_idx'],
             'poses_x': obs['poses_x'],
             'poses_y': obs['poses_y'],
             'poses_theta': obs['poses_theta'],
             'lap_times': obs['lap_times'],
-            'lap_counts': obs['lap_counts']
+            'lap_counts': obs['lap_counts'],
+            'collisions': obs['collisions'],
         }
-
-        return obs, info
 
     def update_map(self, map_path, map_ext):
         """
@@ -428,8 +419,7 @@ class F110Env(gym.Env):
         Args:
             callback_func (function (EnvRenderer) -> None): custom function to called during render()
         """
-
-        F110Env.render_callbacks.append(callback_func)
+        self.renderer.add_render_callback(callback_func)
 
     def render(self, mode='human'):
         """
@@ -444,6 +434,12 @@ class F110Env(gym.Env):
             None
         """
         # NOTE: separate render (manage render-mode) from render_frame (actual rendering with pyglet)
+        # render according to fps
+        if not int(self.current_time / self.timestep) % int(100 / self.metadata['render_fps']) == 0:
+            if self.render_mode == 'rgb_array':
+                return self.last_frame
+            else:
+                return
 
         if self.render_mode not in self.metadata['render_modes']:
             return
@@ -460,25 +456,17 @@ class F110Env(gym.Env):
             pitch = image_data.width * len(fmt)
             pil_image = PIL.Image.frombytes(fmt, (image_data.width, image_data.height), image_data.get_data(fmt, pitch))
             pil_image = pil_image.transpose(Transpose.FLIP_TOP_BOTTOM)
-            return np.array(pil_image)
+            self.last_frame = np.array(pil_image)
+            return self.last_frame
         else:
             raise NotImplementedError(f"mode {self.render_mode} not implemented")
 
     def render_frame(self, mode):
-        if F110Env.renderer is None:
-            # first call, initialize everything
-            from f110_gym.envs.rendering import EnvRenderer
-            F110Env.renderer = EnvRenderer(WINDOW_W, WINDOW_H)
-            F110Env.renderer.update_map(self.map_name, self.map_ext)
 
-        F110Env.renderer.update_obs(self.render_obs)
+        self.renderer.update(self.render_obs)
 
-        for render_callback in F110Env.render_callbacks:
-            render_callback(F110Env.renderer)
+        self.renderer.render()
 
-        F110Env.renderer.dispatch_events()
-        F110Env.renderer.on_draw()
-        F110Env.renderer.flip()
         if mode == 'human':
             time.sleep(0.005)
         elif mode == 'human_fast':
