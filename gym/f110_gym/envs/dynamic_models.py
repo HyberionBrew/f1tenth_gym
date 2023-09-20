@@ -41,7 +41,7 @@ class DynamicModel(Enum):
         else:
             raise ValueError(f"Unknown model type {model}")
 
-    def get_initial_state(self, pose=None):
+    def get_initial_state(self, pose=None, velocity=None):
         # initialize zero state
         if self == DynamicModel.KS:
             # state is [x, y, steer_angle, vel, yaw_angle]
@@ -56,7 +56,10 @@ class DynamicModel(Enum):
         if pose is not None:
             state[0:2] = pose[0:2]
             state[4] = pose[2]
-
+        #print(velocity)
+        if velocity is not None:
+            #print("set velocity", velocity)
+            state[3] = velocity
         return state
 
     @property

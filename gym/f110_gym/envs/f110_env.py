@@ -377,14 +377,25 @@ class F110Env(gym.Env):
         # states after reset
         if options is None or "poses" not in options:
             options = {"poses": np.zeros((self.num_agents, 3))}
+        if "velocity" not in options:
+            options["velocity"] = np.zeros((self.num_agents,))
         assert "poses" in options, "Must provide initial poses for reset"
+        assert "velocity" in options, "Must provide initial velocity for reset"
         assert isinstance(options["poses"], np.ndarray) and options["poses"].shape == (
             self.num_agents,
             3,
         ), "Initial poses must be a numpy array of shape (num_agents, 3)"
+        # print(options["velocity"])
+        assert isinstance(options["velocity"], np.ndarray) and options["velocity"].shape == (
+            self.num_agents,
+        ), "Initial velocity must be a numpy array of shape (num_agents,)"
+
         poses = options["poses"]
         self.start_xs = poses[:, 0]
         self.start_ys = poses[:, 1]
+
+        start_velocity = options["velocity"]
+        
         self.start_thetas = poses[:, 2]
         self.start_rot = np.array(
             [
@@ -399,8 +410,10 @@ class F110Env(gym.Env):
             ]
         )
 
+        #print("calling reset to sim")
         # call reset to simulator
-        self.sim.reset(poses)
+        #print(self.sim)
+        self.sim.reset(poses, velocity= start_velocity) # velocity = start_velocity
 
         # get no input observations
         action = np.zeros((self.num_agents, 2))

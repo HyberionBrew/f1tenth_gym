@@ -186,24 +186,28 @@ class RaceCar(object):
         """
         RaceCar.scan_simulator.set_map(map_name)
 
-    def reset(self, pose):
+    def reset(self, pose, velocity):
         """
         Resets the vehicle to a pose
 
         Args:
             pose (np.ndarray (3, )): pose to reset the vehicle to
-
+            velocity float: inital velocity
         Returns:
             None
         """
+        #print("Called agent reset")
+        #print(velocity)
+        assert isinstance(velocity, float), "Initial velocity must be float"
+        
         # clear control inputs
         self.accel = 0.0
         self.steer_angle_vel = 0.0
         # clear collision indicator
         self.in_collision = False
         # init state from pose
-        self.state = self.model.get_initial_state(pose=pose)
-
+        self.state = self.model.get_initial_state(pose=pose, velocity=velocity)
+        #print(self.state)
         self.steer_buffer = np.empty((0,))
         # reset scan random generator
         self.scan_rng = np.random.default_rng(seed=self.seed)
@@ -263,6 +267,7 @@ class RaceCar(object):
 
         # if in collision stop vehicle
         if in_collision:
+            # print("in collision")
             self.state[3:] = 0.0
             self.accel = 0.0
             self.steer_angle_vel = 0.0
@@ -401,6 +406,7 @@ class Simulator(object):
         Returns:
             None
         """
+        # print("initing this simulator")
         self.num_agents = num_agents
         self.seed = seed
         self.time_step = time_step
@@ -524,7 +530,7 @@ class Simulator(object):
             if agent.in_collision:
                 self.collisions[i] = 1.0
 
-    def reset(self, poses):
+    def reset(self, poses,  velocity = None):
         """
         Resets the simulation environment by given poses
 
@@ -533,7 +539,11 @@ class Simulator(object):
 
         Returns:
             None
-        """
+        """ 
+        #print("called sim reset")
+        #print(velocity)
+        if velocity == None:
+            velocity = np.zeros((self.num_agents))
 
         if poses.shape[0] != self.num_agents:
             raise ValueError(
@@ -542,4 +552,4 @@ class Simulator(object):
 
         # loop over poses to reset
         for i in range(self.num_agents):
-            self.agents[i].reset(poses[i, :])
+            self.agents[i].reset(poses[i, :], velocity[i])
