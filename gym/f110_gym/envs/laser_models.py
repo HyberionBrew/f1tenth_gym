@@ -509,7 +509,7 @@ class ScanSimulator2D(object):
 
         if self.map_height is None:
             raise ValueError("Map is not set for scan simulator.")
-
+        # print("scan here", pose)
         scan = get_scan(
             pose,
             self.theta_dis,

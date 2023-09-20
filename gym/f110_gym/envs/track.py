@@ -205,6 +205,7 @@ class Track:
 
             # load occupancy grid
             map_filename = pathlib.Path(track_spec.image)
+            print(map_filename)
             image = Image.open(track_dir / str(map_filename)).transpose(
                 Transpose.FLIP_TOP_BOTTOM
             )

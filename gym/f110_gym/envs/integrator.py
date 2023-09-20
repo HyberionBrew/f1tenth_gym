@@ -130,7 +130,24 @@ class RK4Integrator(Integrator):
         )
 
         # dynamics integration
-        x = x + dt * (1 / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")  # Always trigger on warnings
+
+
+            x = x + dt * (1 / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+
+            if any(item.category == RuntimeWarning for item in w):
+                print("Caught a RuntimeWarning!")
+            
+                print("Overflow error in RK4 integrator.")
+                print("k1: ", k1)
+                print("k2: ", k2)
+                print("k3: ", k3)
+                print("k4: ", k4)
+                print("dt: ", dt)
+                print("x: ", x)
+                print("u: ", u)
+
         return x
 
 
