@@ -65,7 +65,7 @@ class EnvRenderer(pyglet.window.Window):
         Returns:
             None
         """
-        conf = Config(sample_buffers=1, samples=4, depth_size=16, double_buffer=True)
+        conf = Config()
         super().__init__(
             width, height, config=conf, resizable=True, vsync=False, *args, **kwargs
         )
