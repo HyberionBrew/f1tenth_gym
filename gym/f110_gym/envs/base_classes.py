@@ -206,6 +206,7 @@ class RaceCar(object):
         # clear collision indicator
         self.in_collision = False
         # init state from pose
+        # print(velocity, "reset")
         self.state = self.model.get_initial_state(pose=pose, velocity=velocity)
         #print(self.state)
         self.steer_buffer = np.empty((0,))
@@ -301,7 +302,6 @@ class RaceCar(object):
 
         if self.action_type.type is None:
             raise ValueError("No Control Action Type Specified.")
-
         accl, sv = self.action_type.act(
             action=(vel, steer), state=self.state, params=self.params
         )
@@ -507,6 +507,7 @@ class Simulator(object):
         # looping over agents
         for i, agent in enumerate(self.agents):
             # update each agent's pose
+            #print(control_inputs[i, 0], control_inputs[i, 1])
             current_scan = agent.update_pose(control_inputs[i, 0], control_inputs[i, 1])
             self.agent_scans[i, :] = current_scan
 
@@ -544,7 +545,7 @@ class Simulator(object):
         #print(velocity)
         if velocity == None:
             velocity = np.zeros((self.num_agents))
-
+        # print(velocity, "reset")
         if poses.shape[0] != self.num_agents:
             raise ValueError(
                 "Number of poses for reset does not match number of agents."

@@ -99,6 +99,7 @@ class Raceline:
     @staticmethod
     def from_raceline_file(filepath: pathlib.Path, delimiter: str = ";"):
         assert filepath.exists(), f"input filepath does not exist ({filepath})"
+        print("Loading raceline from file: " + str(filepath))
         waypoints = np.loadtxt(filepath, delimiter=delimiter).astype(np.float32)
         assert (
             waypoints.shape[1] == 7
@@ -214,6 +215,7 @@ class Track:
             occupancy_map[occupancy_map > 128] = 255.0
 
             # if exists, load centerline
+            print("loading centerline from: " + str(track_dir / f"{track}_centerline.csv"))
             if (track_dir / f"{track}_centerline.csv").exists():
                 centerline = Raceline.from_centerline_file(
                     track_dir / f"{track}_centerline.csv"

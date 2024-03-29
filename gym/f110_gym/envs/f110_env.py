@@ -395,7 +395,7 @@ class F110Env(gym.Env):
         self.start_ys = poses[:, 1]
 
         start_velocity = options["velocity"]
-        
+        # print("start velocity: ", start_velocity)
         self.start_thetas = poses[:, 2]
         self.start_rot = np.array(
             [
@@ -417,6 +417,7 @@ class F110Env(gym.Env):
 
         # get no input observations
         action = np.zeros((self.num_agents, 2))
+        action[..., 1] = start_velocity
         obs, _, _, _, info = self.step(action)
 
         return obs, info
