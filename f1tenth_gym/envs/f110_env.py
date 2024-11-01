@@ -91,6 +91,7 @@ class F110Env(gym.Env):
         super().__init__()
 
         # Configuration
+        print("In gym config:", config)
         self.config = self.default_config()
         self.configure(config)
 
@@ -187,6 +188,76 @@ class F110Env(gym.Env):
             render_mode=render_mode,
             render_fps=self.metadata["render_fps"],
         )
+        
+        ## added by me to do crash detection easily
+        # initalize a scan simulator 
+        from .laser_models import ScanSimulator2D
+        # make the scan go around the car
+        self.scan_simulator = ScanSimulator2D(1080, 6.28) 
+        self.scan_simulator.set_map(self.track)
+        self.add_render_callback(self.render_monitor)
+        self.aux_data = None
+    
+    def render_monitor_old(self,e):
+        if self.aux_data is not None:
+            #print(self.aux_data[0])
+            #print(self.aux_data[1])
+            points = np.asarray(self.aux_data["data"])
+            #print(points.shape)
+            safe =self.aux_data["violation"]
+            #print(safe)
+            last_violation = self.aux_data["last_violation"]
+            # make the points green if safe
+            if last_violation != 0:
+                e.render_points(points, size=1, color=(255, 0, 0))
+            else:
+                e.render_points(points, size=1, color=(0, 255, 0))
+    def render_monitor(self, e):
+        """
+        Renders monitoring points with appropriate colors based on agent roles and violations.
+
+        Args:
+            e: The environment or rendering engine instance with a `render_points` method.
+        """
+        if self.aux_data is not None:
+            points = np.asarray(self.aux_data["data"])  # Shape: (num_agents * points_per_agent, 2)
+            num_agents = getattr(self, 'num_agents', 1)  # Default to 1 if not defined
+
+            if num_agents > 1:
+                points_per_agent = len(points) // num_agents
+                # Ensure that points can be evenly divided among agents
+                if len(points) % num_agents != 0:
+                    raise ValueError("The number of points is not divisible by the number of agents.")
+
+                # Reshape points to (num_agents, points_per_agent, 2)
+                agent_points = points.reshape((num_agents, points_per_agent, 2))
+
+                # Determine color for ego agent based on violation
+                if self.aux_data.get("last_violation", 0) != 0:
+                    ego_color = (255, 0, 0)  # Red
+                else:
+                    ego_color = (0, 255, 0)  # Green
+
+                # Color for other agents
+                other_color = (255, 165, 0)  # Orange
+
+                # Prepare a list of colors: first agent's color followed by others
+                colors = [ego_color] + [other_color] * (num_agents - 1)
+
+                # Convert colors to a NumPy array for efficient processing
+                colors_np = np.array(colors, dtype=np.uint8)  # Shape: (num_agents, 3)
+
+                # Iterate over agents and render their points with respective colors
+                for agent_idx in range(num_agents):
+                    e.render_points(agent_points[agent_idx], size=1, color=colors_np[agent_idx].tolist())
+            else:
+                # Single agent: original behavior
+                last_violation = self.aux_data.get("last_violation", 0)
+                if last_violation != 0:
+                    color = (255, 0, 0)  # Red
+                else:
+                    color = (0, 255, 0)  # Green
+                e.render_points(points, size=1, color=color)
 
     @classmethod
     def default_config(cls) -> dict:
@@ -248,7 +319,31 @@ class F110Env(gym.Env):
                 self.action_space = from_single_to_multi_action_space(
                     self.action_type.space, self.num_agents
                 )
+    def obs_to_monitor(self, obs):
+        # return the first poses x the first poses_y linear_vels_x linear_vels_y ang_vels_z
+        if self.num_agents == 1:
+            trimmed_obs = np.array([obs["poses_x"][0], obs["poses_y"][0], obs["poses_theta"][0], obs["linear_vels_x"][0], obs["linear_vels_y"][0], obs["ang_vels_z"][0]])
+        else:
+            # append all the agents
+            all_obs = []
+            for i in range(self.num_agents):
+                all_obs.append([obs["poses_x"][i], obs["poses_y"][i], obs["poses_theta"][i], obs["linear_vels_x"][i], obs["linear_vels_y"][i], obs["ang_vels_z"][i]])
+            trimmed_obs = np.array(all_obs)
+        return trimmed_obs
 
+    def is_safe(self, obs, dang_dist = 0.3, **kwargs):
+        """ Checks if we are crashing at the x,y position provided.
+        Args:
+            obs (_type_): Assumes that the first value is the x and second the y
+        """
+        #print(obs[0:3])
+        #print(np.asarray([obs[0],obs[1],0.0]))
+        scan = self.scan_simulator.scan(np.asarray([obs[0],obs[1],0.0]),None)
+        # check if each scan element is less than the dang_dist
+        is_safe =  min(scan) > dang_dist
+        #print(is_safe, dang_dist, min(scan))
+        return is_safe
+    
     def _check_done(self):
         """
         Check if the current rollout is done
@@ -341,6 +436,7 @@ class F110Env(gym.Env):
             "collisions": self.sim.collisions,
             "sim_time": self.current_time,
         }
+        #print("collisons", self.sim.collisions)
 
         # check done
         done, toggle_list = self._check_done()
@@ -403,6 +499,7 @@ class F110Env(gym.Env):
         )
 
         # call reset to simulator
+        # print("reset poses", poses)
         self.sim.reset(poses)
 
         # get no input observations
