@@ -221,7 +221,9 @@ class F110Env(gym.Env):
         """
         if self.aux_data is not None:
             points = np.asarray(self.aux_data["data"])  # Shape: (num_agents * points_per_agent, 2)
+            #print(points)
             num_agents = getattr(self, 'num_agents', 1)  # Default to 1 if not defined
+            # check if points is empty
 
             if num_agents > 1:
                 points_per_agent = len(points) // num_agents
@@ -252,11 +254,18 @@ class F110Env(gym.Env):
                     e.render_points(agent_points[agent_idx], size=1, color=colors_np[agent_idx].tolist())
             else:
                 # Single agent: original behavior
+                if len(points) == 0 or len(points[0]) == 0:  
+                    return
+                #print(points)
+                #print(len(points))
+                # take the first two dimensions
+                points = points[:, :2]
                 last_violation = self.aux_data.get("last_violation", 0)
                 if last_violation != 0:
                     color = (255, 0, 0)  # Red
                 else:
                     color = (0, 255, 0)  # Green
+                
                 e.render_points(points, size=1, color=color)
 
     @classmethod
