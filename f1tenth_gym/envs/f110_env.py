@@ -193,7 +193,7 @@ class F110Env(gym.Env):
         # initalize a scan simulator 
         from .laser_models import ScanSimulator2D
         # make the scan go around the car
-        self.scan_simulator = ScanSimulator2D(1080, 6.28) 
+        self.scan_simulator = ScanSimulator2D(64, 6.28) 
         self.scan_simulator.set_map(self.track)
         self.add_render_callback(self.render_monitor)
         self.aux_data = None

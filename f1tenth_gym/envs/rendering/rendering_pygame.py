@@ -106,10 +106,16 @@ class PygameEnvRenderer(EnvRenderer):
 
         # load map image
         original_img = track.occupancy_map
-
+        print(render_spec)
+        """
         self.map_renderers = {
-            "map": Map(map_img=original_img, zoom_level=0.4),
+            "map": Map(map_img=original_img, zoom_level=1.0),
             "car": Map(map_img=original_img, zoom_level=render_spec.zoom_in_factor),
+        }
+        """
+        self.map_renderers = {
+            "map": Map(map_img=original_img, zoom_level=2.0),
+            "car": Map(map_img=original_img, zoom_level=2.0),
         }
         self.map_canvases = {
             k: pygame.Surface((map_r.track_map.shape[0], map_r.track_map.shape[1]))
@@ -307,6 +313,40 @@ class PygameEnvRenderer(EnvRenderer):
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
                 logging.debug("Pressed S key -> Enable/disable rendering")
                 self.draw_flag = not (self.draw_flag)
+    def render_points_alpha(
+        self,
+        points: list | np.ndarray,
+        color: Optional[tuple[int, int, int, int]] = (0, 0, 255, 128),
+        size: Optional[int] = 1,
+    ) -> None:
+        """
+        Render a sequence of xy points on screen with alpha transparency.
+
+        Parameters
+        ----------
+        points : list | np.ndarray
+            list of points to render
+        color : Optional[tuple[int, int, int, int]], optional
+            color as rgba tuple, by default semi-transparent blue (0, 0, 255, 128)
+        size : Optional[int], optional
+            size of the points in pixels, by default 1
+        """
+        origin = self.map_origin
+        ppu = self.ppus[self.active_map_renderer]
+        resolution = self.map_resolution * ppu
+        points = ((points - origin[:2]) / resolution).astype(int)
+        size = math.ceil(size / ppu)
+
+        # Create a temporary surface with per-pixel alpha
+        temp_surface = pygame.Surface((size * 2 + 1, size * 2 + 1), pygame.SRCALPHA)
+
+        # Draw a circle onto the temporary surface
+        temp_color = (color[0], color[1], color[2], color[3])  # RGBA
+        pygame.draw.circle(temp_surface, temp_color, (size, size), size)
+
+        # Blit the temporary surface for each point
+        for point in points:
+            self.map_canvas.blit(temp_surface, (point[0] - size, point[1] - size))
 
     def render_points(
         self,
