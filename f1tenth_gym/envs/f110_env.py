@@ -242,9 +242,9 @@ class F110Env(gym.Env):
 
                 # Determine color for ego agent based on violation
                 if self.aux_data.get("last_violation", 0) != 0:
-                    ego_color = (255, 0, 0)  # Red
+                    ego_color = (0, 255, 0)  # Red
                 else:
-                    ego_color = (0, 255, 0)  # Green
+                    ego_color = (255, 0, 0)  # Green
 
                 # Color for other agents
                 other_color = (255, 165, 0)  # Orange
