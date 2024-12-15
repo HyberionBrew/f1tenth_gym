@@ -224,9 +224,15 @@ class F110Env(gym.Env):
             #print(points)
             num_agents = getattr(self, 'num_agents', 1)  # Default to 1 if not defined
             # check if points is empty
-
+            if len(points) == 0 or len(points[0]) == 0:  
+                return
+                
             if num_agents > 1:
+                # take first two dimension
+                points = points[:, :2]
+                
                 points_per_agent = len(points) // num_agents
+                
                 # Ensure that points can be evenly divided among agents
                 if len(points) % num_agents != 0:
                     raise ValueError("The number of points is not divisible by the number of agents.")
@@ -254,8 +260,7 @@ class F110Env(gym.Env):
                     e.render_points(agent_points[agent_idx], size=1, color=colors_np[agent_idx].tolist())
             else:
                 # Single agent: original behavior
-                if len(points) == 0 or len(points[0]) == 0:  
-                    return
+                
                 #print(points)
                 #print(len(points))
                 # take the first two dimensions
